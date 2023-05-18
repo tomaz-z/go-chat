@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  api:
+    image: golang:1.20.4-alpine
+    volumes:
+      - ./src:/app/src:ro
+      - ./scripts:/app/scripts:ro
+    entrypoint: /app/scripts/start.sh
