@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-cd /app/src/server
+cd /app/src
 
-go build -o /app/bin/api /app/src/server
+go build -o /app/bin/api /app/src/cmd/server
 
 /app/bin/api

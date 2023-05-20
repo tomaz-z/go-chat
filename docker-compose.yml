@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  api:
+  server:
     image: golang:1.20.4-alpine
     volumes:
       - ./src:/app/src
