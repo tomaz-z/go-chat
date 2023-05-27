@@ -46,6 +46,10 @@ func announce(connections map[ulid.ULID]*websocket.Conn, msg Message) {
 		err := wsjson.Write(ctx, conn, msg)
 		cancel()
 		if err != nil {
+			if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
+				return
+			}
+
 			log.Fatal(err, "error sending message")
 		}
 	}
@@ -99,6 +103,7 @@ func main() {
 		c, err := websocket.Accept(w, r, nil)
 		if err != nil {
 			log.Fatal(err, "error getting connection")
+
 			return
 		}
 		defer c.Close(websocket.StatusNormalClosure, "")
@@ -106,13 +111,15 @@ func main() {
 		var msg GreetMessage
 		err = wsjson.Read(context.Background(), c, &msg)
 		if err != nil {
-			log.Fatal(err, "error getting connection")
+			log.Fatal(err, "error reading message")
+
 			return
 		}
 
 		user, ok := users[msg.Token]
 		if !ok {
 			log.Fatal("invalid token")
+
 			return
 		}
 
@@ -124,11 +131,14 @@ func main() {
 		})
 
 		for {
-			var msg Message
-			err = wsjson.Read(context.Background(), c, &msg)
+			msg := Message{}
+			err := wsjson.Read(context.Background(), c, &msg)
 			if err != nil {
-				log.Fatal(err, "error getting connection")
-				return
+				if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
+					return
+				}
+
+				log.Fatal(err, "error reading message")
 			}
 
 			chatHistory = append(chatHistory, msg)

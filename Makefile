@@ -1,5 +1,7 @@
 .PHONY: start stop logs
 
+.SILENT: start stop logs
+
 start:
 	docker compose up -d
 
