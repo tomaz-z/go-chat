@@ -1,3 +1,3 @@
 ### Go chat
 
-Basic API for websocket-based communication between clients.
+Basic Websocket server for chatting.
