@@ -7,6 +7,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/oklog/ulid/v2"
@@ -159,9 +162,34 @@ func main() {
 		}
 	}))
 
+	term := make(chan os.Signal, 1)
+	signal.Notify(term, syscall.SIGTERM)
+
+	srv := http.Server{
+		Addr: ":4001",
+	}
+
+	go func() {
+		if err := srv.ListenAndServe(); err != nil {
+			log.Fatal(err, "error on serving API")
+		}
+	}()
+
 	log.Println("Server ready!")
 
-	if err := http.ListenAndServe(":4001", nil); err != nil {
-		log.Fatal(err, "error on serving API")
+	<-term
+
+	log.Println("Stopping server...")
+
+	for _, c := range connections {
+		if err := c.Close(websocket.StatusNormalClosure, "stopping server"); err != nil {
+			log.Println(err, "error closing websocket client")
+		}
 	}
+
+	if err := srv.Shutdown(context.Background()); err != nil {
+		log.Fatal(err, "error shutting down server")
+	}
+
+	log.Println("Server stopped.")
 }
