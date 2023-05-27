@@ -140,6 +140,7 @@ func main() {
 			if err != nil {
 				if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
 					delete(connections, token)
+					delete(users, token)
 
 					announce(connections, Message{
 						Author: GoChatName,
