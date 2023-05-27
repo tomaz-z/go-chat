@@ -81,10 +81,12 @@ func main() {
 
 		token := ulid.Make()
 
-		if _, ok := users[token]; ok {
-			w.WriteHeader(http.StatusBadRequest)
+		for _, u := range users {
+			if u == user.Name {
+				w.WriteHeader(http.StatusBadRequest)
 
-			return
+				return
+			}
 		}
 
 		users[token] = user.Name
@@ -116,14 +118,16 @@ func main() {
 			return
 		}
 
-		user, ok := users[msg.Token]
+		token := msg.Token
+
+		user, ok := users[token]
 		if !ok {
 			log.Fatal("invalid token")
 
 			return
 		}
 
-		connections[msg.Token] = c
+		connections[token] = c
 
 		announce(connections, Message{
 			Author: GoChatName,
@@ -131,10 +135,17 @@ func main() {
 		})
 
 		for {
-			msg := Message{}
+			var msg Message
 			err := wsjson.Read(context.Background(), c, &msg)
 			if err != nil {
 				if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
+					delete(connections, token)
+
+					announce(connections, Message{
+						Author: GoChatName,
+						Value:  fmt.Sprintf("%s has left the chat!", user),
+					})
+
 					return
 				}
 
