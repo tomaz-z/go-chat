@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/oklog/ulid/v2"
@@ -105,6 +106,9 @@ func main() {
 			err = wsjson.Read(ctx, c, &msg)
 			if err != nil {
 				if websocket.CloseStatus(err) == websocket.StatusNormalClosure || errors.Is(err, context.Canceled) {
+					// On server closure, termination should happen on clients.
+					interrupt <- syscall.SIGTERM
+
 					return
 				}
 
@@ -141,7 +145,7 @@ func main() {
 	log.Println("Stopping websocket client...")
 
 	if err = c.Close(websocket.StatusNormalClosure, "stopping client"); err != nil {
-		log.Fatal(err, "error closing websocket client")
+		log.Println(err, "error closing websocket client")
 
 		return
 	}

@@ -6,6 +6,6 @@ services:
     volumes:
       - ./src:/app/src
       - ./scripts:/app/scripts
-    entrypoint: /app/scripts/start.sh
+    entrypoint: ["/app/scripts/start.sh"]
     ports:
       - 4001:4001

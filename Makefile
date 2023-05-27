@@ -10,3 +10,9 @@ stop:
 
 logs:
 	docker compose logs
+
+build/%:
+	go build -o /bin/$* /app/src/cmd/$*
+
+run/%:
+	/bin/$*

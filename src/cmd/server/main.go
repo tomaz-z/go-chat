@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -170,7 +171,7 @@ func main() {
 	}
 
 	go func() {
-		if err := srv.ListenAndServe(); err != nil {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatal(err, "error on serving API")
 		}
 	}()
@@ -179,13 +180,15 @@ func main() {
 
 	<-term
 
-	log.Println("Stopping server...")
+	log.Println("Closing open websocket connections...")
 
 	for _, c := range connections {
 		if err := c.Close(websocket.StatusNormalClosure, "stopping server"); err != nil {
 			log.Println(err, "error closing websocket client")
 		}
 	}
+
+	log.Println("Stopping server...")
 
 	if err := srv.Shutdown(context.Background()); err != nil {
 		log.Fatal(err, "error shutting down server")
