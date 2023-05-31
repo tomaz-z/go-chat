@@ -83,7 +83,9 @@ func main() {
 		log.Fatal(err, "error unmarshalling token")
 	}
 
-	c, _, err := websocket.Dial(context.Background(), "ws://localhost:4001/chat", nil)
+	c, _, err := websocket.Dial(context.Background(), "ws://localhost:4001/chat", &websocket.DialOptions{
+		// HTTPHeader: ,
+	})
 	if err != nil {
 		log.Fatal(err, "error dialing server")
 	}
