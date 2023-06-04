@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"sync"
 
 	"github.com/oklog/ulid/v2"
 
@@ -18,20 +17,16 @@ type JoinHandler interface {
 }
 
 func New(userStorage user.UserStorage) JoinHandler {
-	return handler{
+	return &handler{
 		userStorage: userStorage,
 	}
 }
 
 type handler struct {
-	*sync.Mutex
 	userStorage user.UserStorage
 }
 
 func (h handler) Join(w http.ResponseWriter, r *http.Request) {
-	h.Lock()
-	defer h.Unlock()
-
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusNotFound)
 
@@ -48,7 +43,7 @@ func (h handler) Join(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err, "error unmarshalling body")
 	}
 
-	if _, err = h.userStorage.FindTokenByUsername(user.Name); err != nil {
+	if _, err = h.userStorage.FindTokenByUsername(user.Name); err == nil {
 		w.WriteHeader(http.StatusBadRequest)
 
 		return

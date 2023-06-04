@@ -21,6 +21,10 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
+const (
+	BearerToken = "Bearer"
+)
+
 type User struct {
 	Name string
 }
@@ -63,6 +67,8 @@ func main() {
 		log.Fatal(err, "error marshalling user")
 	}
 
+	log.Println("Joining chat and obtaining token...")
+
 	res, err := http.Post("http://localhost:4001/join", "application/json", bytes.NewReader(userJson))
 	if err != nil {
 		log.Fatal(err, "error on POST /join")
@@ -83,29 +89,23 @@ func main() {
 		log.Fatal(err, "error unmarshalling token")
 	}
 
-	c, _, err := websocket.Dial(context.Background(), "ws://localhost:4001/chat", &websocket.DialOptions{
-		// HTTPHeader: ,
-	})
-	if err != nil {
-		log.Fatal(err, "error dialing server")
-	}
-	defer c.Close(websocket.StatusInternalError, "the sky is falling")
+	log.Println("Token received!")
 
-	ctx := context.Background()
-
-	ctxGreet, cancelGreet := context.WithTimeout(ctx, time.Second*10)
-	err = wsjson.Write(ctxGreet, c, GreetMessage{
-		Token: token.Value,
-	})
-	cancelGreet()
-	if err != nil {
-		log.Fatal(err, "error sending message")
-	}
-
+	// Subscribe to messages.
 	go func() {
+		c, _, err := websocket.Dial(context.Background(), "ws://localhost:4001/subscribe", &websocket.DialOptions{
+			HTTPHeader: http.Header{BearerToken: []string{token.Value.String()}},
+		})
+		if err != nil {
+			log.Fatal(err, "error dialing server")
+		}
+		defer c.Close(websocket.StatusInternalError, "the sky is falling")
+
+		log.Println("Subscribe: OK")
+
 		for {
 			var msg Message
-			err = wsjson.Read(ctx, c, &msg)
+			err = wsjson.Read(context.Background(), c, &msg)
 			if err != nil {
 				if websocket.CloseStatus(err) == websocket.StatusNormalClosure || errors.Is(err, context.Canceled) {
 					// On server closure, termination should happen on clients.
@@ -121,7 +121,18 @@ func main() {
 		}
 	}()
 
+	// Publish messages.
 	go func() {
+		c, _, err := websocket.Dial(context.Background(), "ws://localhost:4001/publish", &websocket.DialOptions{
+			HTTPHeader: http.Header{BearerToken: []string{token.Value.String()}},
+		})
+		if err != nil {
+			log.Fatal(err, "error dialing server")
+		}
+		defer c.Close(websocket.StatusInternalError, "the sky is falling")
+
+		log.Println("Publish: OK")
+
 		for {
 			reader := bufio.NewReader(os.Stdin)
 			message, err := reader.ReadString('\n')
@@ -130,7 +141,7 @@ func main() {
 			}
 			message = strings.TrimSpace(message)
 
-			ctxMessage, cancelMessage := context.WithTimeout(ctx, time.Second*10)
+			ctxMessage, cancelMessage := context.WithTimeout(context.Background(), time.Second*10)
 			err = wsjson.Write(ctxMessage, c, Message{
 				Author: author,
 				Value:  message,
@@ -144,13 +155,5 @@ func main() {
 
 	<-interrupt
 
-	log.Println("Stopping websocket client...")
-
-	if err = c.Close(websocket.StatusNormalClosure, "stopping client"); err != nil {
-		log.Println(err, "error closing websocket client")
-
-		return
-	}
-
-	log.Println("Websocket client closed!")
+	log.Println("Stopping client...")
 }

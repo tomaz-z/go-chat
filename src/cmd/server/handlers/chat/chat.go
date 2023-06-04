@@ -126,7 +126,7 @@ func (h handler) Subscribe(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: properly handle open connections
 
-	for msg := range h.chatService.ReadMessages() {
+	for msg := range h.chatService.Subscribe() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 
 		err := wsjson.Write(ctx, c, models.Message{

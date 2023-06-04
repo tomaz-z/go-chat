@@ -21,7 +21,7 @@ func New() UserStorage {
 }
 
 type storage struct {
-	*sync.Mutex
+	sync.Mutex
 	users map[ulid.ULID]string
 }
 
