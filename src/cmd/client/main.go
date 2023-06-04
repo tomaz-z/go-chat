@@ -92,20 +92,21 @@ func main() {
 	log.Println("Token received!")
 
 	// Subscribe to messages.
+	var cSubscribe *websocket.Conn
 	go func() {
-		c, _, err := websocket.Dial(context.Background(), "ws://localhost:4001/subscribe", &websocket.DialOptions{
+		cSubscribe, _, err = websocket.Dial(context.Background(), "ws://localhost:4001/subscribe", &websocket.DialOptions{
 			HTTPHeader: http.Header{BearerToken: []string{token.Value.String()}},
 		})
 		if err != nil {
 			log.Fatal(err, "error dialing server")
 		}
-		defer c.Close(websocket.StatusInternalError, "the sky is falling")
+		defer cSubscribe.Close(websocket.StatusInternalError, "the sky is falling")
 
 		log.Println("Subscribe: OK")
 
 		for {
 			var msg Message
-			err = wsjson.Read(context.Background(), c, &msg)
+			err = wsjson.Read(context.Background(), cSubscribe, &msg)
 			if err != nil {
 				if websocket.CloseStatus(err) == websocket.StatusNormalClosure || errors.Is(err, context.Canceled) {
 					// On server closure, termination should happen on clients.
@@ -122,14 +123,15 @@ func main() {
 	}()
 
 	// Publish messages.
+	var cPublish *websocket.Conn
 	go func() {
-		c, _, err := websocket.Dial(context.Background(), "ws://localhost:4001/publish", &websocket.DialOptions{
+		cPublish, _, err = websocket.Dial(context.Background(), "ws://localhost:4001/publish", &websocket.DialOptions{
 			HTTPHeader: http.Header{BearerToken: []string{token.Value.String()}},
 		})
 		if err != nil {
 			log.Fatal(err, "error dialing server")
 		}
-		defer c.Close(websocket.StatusInternalError, "the sky is falling")
+		defer cPublish.Close(websocket.StatusInternalError, "the sky is falling")
 
 		log.Println("Publish: OK")
 
@@ -142,7 +144,7 @@ func main() {
 			message = strings.TrimSpace(message)
 
 			ctxMessage, cancelMessage := context.WithTimeout(context.Background(), time.Second*10)
-			err = wsjson.Write(ctxMessage, c, Message{
+			err = wsjson.Write(ctxMessage, cPublish, Message{
 				Author: author,
 				Value:  message,
 			})
@@ -156,4 +158,14 @@ func main() {
 	<-interrupt
 
 	log.Println("Stopping client...")
+
+	if err := cSubscribe.Close(websocket.StatusNormalClosure, "stopping subscribe client"); err != nil {
+		log.Println(err, "error closing subscribe websocket client")
+	}
+
+	if err := cPublish.Close(websocket.StatusNormalClosure, "stopping publish server"); err != nil {
+		log.Println(err, "error closing publish websocket client")
+	}
+
+	log.Println("Client stopped.")
 }

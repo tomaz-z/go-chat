@@ -64,7 +64,7 @@ func (h handler) Publish(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close(websocket.StatusNormalClosure, "")
 
-	//h.connService.Set(token, c) //TODO remove connService concept?
+	h.connService.Add(c)
 
 	// Announce new user.
 	h.chatService.PostMessage(chat.Message{
@@ -77,7 +77,6 @@ func (h handler) Publish(w http.ResponseWriter, r *http.Request) {
 		err := wsjson.Read(context.Background(), c, &msg)
 		if err != nil {
 			if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
-				h.connService.Remove(token)
 				h.userStorage.Remove(token)
 
 				// Announce user left.
@@ -124,9 +123,10 @@ func (h handler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close(websocket.StatusNormalClosure, "")
 
-	// TODO: properly handle open connections
+	h.connService.Add(c)
 
 	for msg := range h.chatService.Subscribe() {
+		msg := msg
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 
 		err := wsjson.Write(ctx, c, models.Message{

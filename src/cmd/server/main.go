@@ -42,8 +42,8 @@ func main() {
 	chatHandler := chatAPI.New(userStorage, connService, chatService)
 
 	http.HandleFunc("/join", joinHandler.Join)
-	http.HandleFunc("/publish", chatHandler.Publish)
 	http.HandleFunc("/subscribe", chatHandler.Subscribe)
+	http.HandleFunc("/publish", chatHandler.Publish)
 
 	term := make(chan os.Signal, 1)
 	signal.Notify(term, syscall.SIGTERM)
@@ -62,9 +62,11 @@ func main() {
 
 	<-term
 
-	log.Println("Closing open websocket connections...")
+	log.Println("Closing websocket connections...")
 
 	connService.Close()
+
+	log.Println("Websocket connections closed")
 
 	log.Println("Stopping server...")
 
