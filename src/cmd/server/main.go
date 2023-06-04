@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"gochat/cmd/server/handlers/chat"
-	"gochat/cmd/server/handlers/join"
+	chatAPI "gochat/cmd/server/handlers/chat"
+	joinAPI "gochat/cmd/server/handlers/join"
+	"gochat/internal/chat"
 	"gochat/internal/storage/inmemory/user"
 	"gochat/internal/websocket/connection"
 	"log"
@@ -15,10 +16,6 @@ import (
 	"syscall"
 
 	"github.com/oklog/ulid/v2"
-)
-
-const (
-	GoChatName = "GoChat"
 )
 
 type Token struct {
@@ -39,9 +36,10 @@ func main() {
 	userStorage := user.New()
 
 	connService := connection.New()
+	chatService := chat.New()
 
-	joinHandler := join.New(userStorage)
-	chatHandler := chat.New(userStorage, connService)
+	joinHandler := joinAPI.New(userStorage)
+	chatHandler := chatAPI.New(userStorage, connService, chatService)
 
 	http.HandleFunc("/join", joinHandler.Join)
 	http.HandleFunc("/publish", chatHandler.Publish)

@@ -2,14 +2,17 @@ package chat
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/oklog/ulid/v2"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
 
 	"gochat/cmd/server/models"
+	"gochat/internal/chat"
 	"gochat/internal/storage/inmemory/user"
 	"gochat/internal/websocket/connection"
 )
@@ -19,32 +22,22 @@ type ChatHandler interface {
 	Subscribe(w http.ResponseWriter, r *http.Request)
 }
 
-func New(userStorage user.UserStorage, connService connection.ConnectionService) ChatHandler {
+func New(
+	userStorage user.UserStorage,
+	connService connection.ConnectionService,
+	chatService chat.ChatService,
+) ChatHandler {
 	return handler{
 		userStorage: userStorage,
 		connService: connService,
+		chatService: chatService,
 	}
 }
-
-// func announce(connections map[ulid.ULID]*websocket.Conn, msg Message) {
-// 	for _, conn := range connections {
-// 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-
-// 		err := wsjson.Write(ctx, conn, msg)
-// 		cancel()
-// 		if err != nil {
-// 			if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
-// 				return
-// 			}
-
-// 			log.Fatal(err, "error sending message")
-// 		}
-// 	}
-// }
 
 type handler struct {
 	userStorage user.UserStorage
 	connService connection.ConnectionService
+	chatService chat.ChatService
 }
 
 func (h handler) Publish(w http.ResponseWriter, r *http.Request) {
@@ -71,13 +64,13 @@ func (h handler) Publish(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close(websocket.StatusNormalClosure, "")
 
-	h.connService.Set(token, c)
+	//h.connService.Set(token, c) //TODO remove connService concept?
 
-	// announce - subscribe should listen to channel? would that work?
-	// announce(connections, Message{
-	// 	Author: GoChatName,
-	// 	Value:  fmt.Sprintf("%s has joined the chat!", user),
-	// })
+	// Announce new user.
+	h.chatService.PostMessage(chat.Message{
+		Author:  chat.ChatAPIName,
+		Message: fmt.Sprintf("%s has joined the chat!", user),
+	})
 
 	for {
 		var msg models.Message
@@ -87,10 +80,11 @@ func (h handler) Publish(w http.ResponseWriter, r *http.Request) {
 				h.connService.Remove(token)
 				h.userStorage.Remove(token)
 
-				// announce(connections, Message{
-				// 	Author: GoChatName,
-				// 	Value:  fmt.Sprintf("%s has left the chat!", user),
-				// })
+				// Announce user left.
+				h.chatService.PostMessage(chat.Message{
+					Author:  chat.ChatAPIName,
+					Message: fmt.Sprintf("%s has left the chat!", user),
+				})
 
 				return
 			}
@@ -98,10 +92,54 @@ func (h handler) Publish(w http.ResponseWriter, r *http.Request) {
 			log.Fatal(err, "error reading message")
 		}
 
-		// announce(connections, msg)
+		// Announce user message.
+		h.chatService.PostMessage(chat.Message{
+			Author:  msg.Author,
+			Message: msg.Value,
+		})
 	}
 }
 
 func (h handler) Subscribe(w http.ResponseWriter, r *http.Request) {
-	// todo just listen to a channel?
+	tokenHeader := r.Header.Get(models.BearerToken)
+	token, err := ulid.Parse(tokenHeader)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+
+		return
+	}
+
+	user := h.userStorage.Get(token)
+	if len(user) < 1 {
+		w.WriteHeader(http.StatusUnauthorized)
+
+		return
+	}
+
+	c, err := websocket.Accept(w, r, nil)
+	if err != nil {
+		log.Fatal(err, "error getting connection")
+
+		return
+	}
+	defer c.Close(websocket.StatusNormalClosure, "")
+
+	// TODO: properly handle open connections
+
+	for msg := range h.chatService.ReadMessages() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+
+		err := wsjson.Write(ctx, c, models.Message{
+			Author: msg.Author,
+			Value:  msg.Message,
+		})
+		cancel()
+		if err != nil {
+			if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
+				return
+			}
+
+			log.Fatal(err, "error sending message")
+		}
+	}
 }
