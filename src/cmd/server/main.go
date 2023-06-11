@@ -2,35 +2,29 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	chatAPI "gochat/cmd/server/handlers/chat"
-	joinAPI "gochat/cmd/server/handlers/join"
-	"gochat/internal/chat"
-	"gochat/internal/storage/inmemory/user"
-	"gochat/internal/websocket/connection"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/oklog/ulid/v2"
+	chatAPI "gochat/cmd/server/handlers/chat"
+	joinAPI "gochat/cmd/server/handlers/join"
+	"gochat/internal/chat"
+	"gochat/internal/storage/inmemory/user"
+	"gochat/internal/websocket/connection"
 )
 
-type Token struct {
-	Value ulid.ULID
-}
-
-func (t Token) JSON() ([]byte, error) {
-	return json.Marshal(t)
-}
-
-type GreetMessage struct {
-	Token ulid.ULID
-}
+const EnvGoChatPort = "GO_CHAT_PORT"
 
 func main() {
+	port := os.Getenv(EnvGoChatPort)
+	if len(port) < 1 {
+		port = "4001"
+	}
+
 	log.Println("Starting server...")
 
 	userStorage := user.New()
@@ -49,7 +43,7 @@ func main() {
 	signal.Notify(term, syscall.SIGTERM)
 
 	srv := http.Server{
-		Addr: ":4001",
+		Addr: fmt.Sprintf(":%s", port),
 	}
 
 	go func() {
@@ -58,7 +52,7 @@ func main() {
 		}
 	}()
 
-	log.Println("Server ready!")
+	log.Printf("Server ready on %s!\n", srv.Addr)
 
 	<-term
 
