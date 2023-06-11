@@ -3,7 +3,7 @@
 .SILENT: start stop logs
 
 start:
-	docker compose up -d
+	docker compose up --detach
 
 stop:
 	docker compose down
