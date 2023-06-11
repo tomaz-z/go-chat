@@ -6,22 +6,26 @@ import (
 	"nhooyr.io/websocket"
 )
 
+type Connection interface {
+	Close(code websocket.StatusCode, reason string) error
+}
+
 type ConnectionService interface {
-	Add(conn *websocket.Conn)
+	Add(conn Connection)
 	Close()
 }
 
 func New() ConnectionService {
 	return &service{
-		connections: []*websocket.Conn{},
+		connections: []Connection{},
 	}
 }
 
 type service struct {
-	connections []*websocket.Conn
+	connections []Connection
 }
 
-func (s *service) Add(conn *websocket.Conn) {
+func (s *service) Add(conn Connection) {
 	s.connections = append(s.connections, conn)
 }
 
