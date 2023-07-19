@@ -1,6 +1,4 @@
-.PHONY: start stop logs
-
-.SILENT: start stop logs
+.PHONY: start stop logs build/% run/%
 
 start:
 	docker compose up --detach

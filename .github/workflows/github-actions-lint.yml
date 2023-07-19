@@ -1,8 +1,0 @@
-name: Github Actions
-on:
-  - push
-jobs:
-  go-lint:
-    runs-on: golangci/golangci-lint
-    steps:
-      - run: golangci-lint
