@@ -22,7 +22,8 @@ import (
 )
 
 const (
-	BearerToken = "Bearer"
+	BearerToken         = "Bearer"
+	EnvGoChatServerHost = "GO_CHAT_SERVER_HOST"
 )
 
 type User struct {
@@ -47,6 +48,11 @@ type Message struct {
 }
 
 func main() {
+	host := os.Getenv(EnvGoChatServerHost)
+	if len(host) < 1 {
+		host = "4001"
+	}
+
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
@@ -69,7 +75,7 @@ func main() {
 
 	log.Println("Joining chat and obtaining token...")
 
-	res, err := http.Post("http://localhost:4001/join", "application/json", bytes.NewReader(userJson))
+	res, err := http.Post(fmt.Sprintf("http://%s/join", host), "application/json", bytes.NewReader(userJson))
 	if err != nil {
 		log.Fatal(err, "error on POST /join")
 	}
@@ -94,7 +100,7 @@ func main() {
 	// Subscribe to messages.
 	var cSubscribe *websocket.Conn
 	go func() {
-		cSubscribe, _, err = websocket.Dial(context.Background(), "ws://localhost:4001/subscribe", &websocket.DialOptions{
+		cSubscribe, _, err = websocket.Dial(context.Background(), fmt.Sprintf("ws://%s/subscribe", host), &websocket.DialOptions{
 			HTTPHeader: http.Header{BearerToken: []string{token.Value.String()}},
 		})
 		if err != nil {
@@ -125,7 +131,7 @@ func main() {
 	// Publish messages.
 	var cPublish *websocket.Conn
 	go func() {
-		cPublish, _, err = websocket.Dial(context.Background(), "ws://localhost:4001/publish", &websocket.DialOptions{
+		cPublish, _, err = websocket.Dial(context.Background(), fmt.Sprintf("ws://%s/publish", host), &websocket.DialOptions{
 			HTTPHeader: http.Header{BearerToken: []string{token.Value.String()}},
 		})
 		if err != nil {

@@ -14,3 +14,6 @@ build/%:
 
 run/%:
 	/bin/$*
+
+test:
+	$(MAKE) -C src/cmd/client start
