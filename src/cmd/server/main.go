@@ -48,7 +48,7 @@ func main() {
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatal(err, "error on serving API")
+			log.Fatalf("error on serving API: %v\n", err)
 		}
 	}()
 
@@ -65,7 +65,7 @@ func main() {
 	log.Println("Stopping server...")
 
 	if err := srv.Shutdown(context.Background()); err != nil {
-		log.Fatal(err, "error shutting down server")
+		log.Fatalf("error shutting down server: %v\n", err)
 	}
 
 	log.Println("Server stopped.")

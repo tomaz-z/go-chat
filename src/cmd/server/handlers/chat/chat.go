@@ -2,7 +2,9 @@ package chat
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -58,7 +60,7 @@ func (h handler) Publish(w http.ResponseWriter, r *http.Request) {
 
 	c, err := websocket.Accept(w, r, nil)
 	if err != nil {
-		log.Fatal(err, "error getting connection")
+		log.Printf("error getting connection: %v\n", err)
 
 		return
 	}
@@ -75,7 +77,7 @@ func (h handler) Publish(w http.ResponseWriter, r *http.Request) {
 	for {
 		var msg models.Message
 		err := wsjson.Read(context.Background(), c, &msg)
-		if err != nil {
+		if err != nil && !errors.Is(err, io.EOF) {
 			if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
 				h.userStorage.Remove(token)
 
@@ -88,7 +90,7 @@ func (h handler) Publish(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			log.Fatal(err, "error reading message")
+			log.Printf("error reading message: %s\n", err)
 		}
 
 		// Announce user message.
@@ -117,7 +119,7 @@ func (h handler) Subscribe(w http.ResponseWriter, r *http.Request) {
 
 	c, err := websocket.Accept(w, r, nil)
 	if err != nil {
-		log.Fatal(err, "error getting connection")
+		log.Printf("error getting connection: %v\n", err)
 
 		return
 	}
@@ -139,7 +141,7 @@ func (h handler) Subscribe(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			log.Fatal(err, "error sending message")
+			log.Printf("error sending message: %s\n", err)
 		}
 	}
 }

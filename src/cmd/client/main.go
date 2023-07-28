@@ -81,7 +81,7 @@ func main() {
 	}
 
 	if res.StatusCode > 399 {
-		log.Fatal(err, "non-200 response returned")
+		log.Fatalf("%d response returned: %v", res.StatusCode, err)
 	}
 
 	tokenBody, err := io.ReadAll(res.Body)

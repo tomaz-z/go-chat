@@ -32,7 +32,7 @@ func (s *service) Add(conn Connection) {
 func (s *service) Close() {
 	for _, c := range s.connections {
 		if err := c.Close(websocket.StatusNormalClosure, "stopping server"); err != nil {
-			log.Println(err, "error closing websocket client")
+			log.Printf("error closing websocket client: %v\n", err)
 		}
 	}
 }
