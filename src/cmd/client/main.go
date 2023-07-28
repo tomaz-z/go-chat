@@ -50,7 +50,7 @@ type Message struct {
 func main() {
 	host := os.Getenv(EnvGoChatServerHost)
 	if len(host) < 1 {
-		host = "4001"
+		host = "localhost:4001"
 	}
 
 	interrupt := make(chan os.Signal, 1)
