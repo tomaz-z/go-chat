@@ -7,7 +7,7 @@ stop:
 	docker compose down
 
 logs:
-	docker compose logs
+	docker compose logs -f
 
 build/%:
 	go build -o /bin/$* /app/src/cmd/$*

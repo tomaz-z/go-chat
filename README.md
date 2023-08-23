@@ -1,14 +1,14 @@
-### Go chat
+## Go chat
 
 A basic single-channel websocket server for communication between connected clients.
 
-## Server
+### Server
 
 Run with `make start`.
 
 By default it starts on port `4001`, which can be overridden with `GO_CHAT_PORT` environment variable.
 
-## Client
+### Client
 
 For testing only!
 
