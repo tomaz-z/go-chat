@@ -1,6 +1,6 @@
 ## Go chat
 
-A basic single-channel websocket server for communication between connected clients.
+A basic single-channel websocket-based server for sending messages between clients without any message queues.
 
 ### Server
 
